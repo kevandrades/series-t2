@@ -422,15 +422,13 @@ CV_ets_boxcox = tsCV(
 
 
 # MAE preditivo
-
-MAE_arima <- CV_arima %>% abs() %>% colMeans(na.rm=T)
-MAE_arima_boxcox <- CV_arima_boxcox %>% abs() %>% colMeans(na.rm=T)
-MAE_ets <- CV_ets %>% abs() %>% colMeans(na.rm=T)
-MAE_ets_boxcox <- CV_ets_boxcox %>% abs() %>% colMeans(na.rm=T)
-
-MAEs_tab <- cbind(MAE_arima, MAE_arima_boxcox, MAE_ets, MAE_ets_boxcox) %>%
-  as_tibble() %>%
-  mutate(h=1:5) %>%
+MAEs_tab <- data.frame(
+  MAE_arima = CV_arima %>% abs() %>% colMeans(na.rm=T),
+  MAE_arima_boxcox = CV_arima_boxcox %>% abs() %>% colMeans(na.rm=T),
+  MAE_ets = CV_ets %>% abs() %>% colMeans(na.rm=T),
+  MAE_ets_boxcox = CV_ets_boxcox %>% abs() %>% colMeans(na.rm=T),
+  h=1:5
+) %>%
   pivot_longer(cols=c("MAE_arima", "MAE_arima_boxcox", "MAE_ets", "MAE_ets_boxcox")) %>%
   mutate(
     name = c(
