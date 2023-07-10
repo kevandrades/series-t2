@@ -2,13 +2,13 @@
 # TP2 - SERIES #
 ################
 
-##############
-# INTRODUCAO #
-##############
+# ----------------------------------------------------------- #
+# 1. INTRODUCAO #
+# ----------------------------------------------------------- #
 
 # Pacotes #
 library(pacman)
-p_load(tidyverse,tseries,forecast,Mcomp,kableExtra)
+p_load(tidyverse,tseries,forecast,Mcomp,kableExtra, purrr)
 
 # Serie escolhida #
 data(M3)
@@ -24,38 +24,41 @@ M3[[id]]$n # no. observacoes
 M3[[id]]$period # periodicidade
 M3[[id]]$type #tipo
 
-serie %>% 
-  plot(main="S?rie temporal do ?ndice geral da produ??o industrial,\n1958-1965 ",xlab="Ano",ylab="?ndice")
+serie %>%
+  plot(
+    main = "Série temporal do ?ndice geral da produ??o industrial,\n1958-1965 ",
+    xlab = "Ano",
+    ylab = "Índice"
+  )
 
 # Decomposicao #
   # STl
-stl(serie,s.window = 12) %>% 
-  plot(main= 'janela = 12') #s.window: tamanho da janela de ajuste para sazonalidade
+stl(serie, s.window = 12) %>%
+  plot(main = "janela = 12")
+#s.window: tamanho da janela de ajuste para sazonalidade
 
-stl(serie,s.window = 'periodic') %>% 
-  plot(main= 'janela = periodic')
+stl(serie, s.window = "periodic") %>%
+  plot(main = "janela = periodic")
 
-  # MSTL
-mstl(serie, lambda = 'auto') %>% 
-  autoplot() + 
-  labs(x="Ano")+
+# MSTL
+mstl(serie, lambda = "auto") %>%
+  autoplot() +
+  labs(x = "Ano") +
   theme_bw()
 
-#################
-# MODELOS ARIMA #
-#################
-
+# ----------------------------------------------------------- #
+# 2. MODELOS ARIMA
+# ----------------------------------------------------------- #
 # Estacionariedade #
 kpss.test(serie)
 
-### MODELO            ####
-### SEM TRANSFORMACAO ####
+### 2.1 Modelo sem transformação
 
-serie %>% ndiffs() 
+serie %>% ndiffs()
 diff(serie) %>% nsdiffs()
-serie_diff <- serie %>% 
-  diff() %>% 
-  diff(lag=12)
+serie_diff <- serie %>%
+  diff() %>%
+  diff(lag = 12)
 
 kpss.test(serie_diff) 
 # teste aponta estacionariedade
@@ -64,82 +67,85 @@ kpss.test(serie_diff)
 ggtsdisplay(serie_diff)
 # lags simples
 # ACF 
-acf(serie_diff,lag.max = 12*5)
-  # as correlacoes nao parecem decair para zero de forma amortizada
-  # mas tbm nao parece haver quebra no lag simples  
+acf(serie_diff, lag.max = 12 * 5)
+# as correlacoes nao parecem decair para zero de forma amortizada
+# mas tbm nao parece haver quebra no lag simples  
 # PACF
 pacf(serie_diff, lag.max = 12*5)
-  # o padrao com relacao ao lag simples nao eh mto claro 
-  # o decaimento nao eh amortizado
-  # nao ha quebra abrupta para o zero
-  # uma vez que nao eh amortizado, testar para p = 0 e 1, P = 0 e 1; 
+# o padrao com relacao ao lag simples nao eh mto claro 
+# o decaimento nao eh amortizado
+# nao ha quebra abrupta para o zero
+# uma vez que nao eh amortizado, testar para p = 0 e 1, P = 0 e 1; 
 
 # conclusao: testar valores de p e q para o ARIMA
 
 # lags sazonais
 # ACF 
-  # parece haver correlacao significativa no lag sazonal 1...
-  # seguida de quebra 
+# parece haver correlacao significativa no lag sazonal 1...
+# seguida de quebra 
 # PACF
-  # nao eh poss?vel observar decaimento amortizado
-  # P=0 e Q=1 (nao identificada quebra no lag P) eh um bom candidato
-  # Tbm nao identificamos quebras nos lags sazonais, pois todos estao abaixo dos limites
-  # Mas nao faz sentido usar P=0 e Q=0 pq no ACF tem quebra no lag sazonal 1
-  # P=1 e Q=1? nao verificado decaimento amortizado em ACF e PACF
+# nao eh poss?vel observar decaimento amortizado
+# P=0 e Q=1 (nao identificada quebra no lag P) eh um bom candidato
+# Tbm nao identificamos quebras nos lags sazonais, pois todos estao abaixo dos limites
+# Mas nao faz sentido usar P=0 e Q=0 pq no ACF tem quebra no lag sazonal 1
+# P=1 e Q=1? nao verificado decaimento amortizado em ACF e PACF
 
 # Testando combinacoes de p,q
 
-melhor_AICc = Inf
+melhor_AICc <- Inf
+
 for(p in 0:3) {
   for(q in 0:3) {
-    fit = Arima(serie_diff, order=c(p,1,q), seasonal=c(0,1,1))
+    fit <- Arima(serie_diff, order=c(p, 0, q), seasonal=c(0, 0, 1))
     if(fit$aicc < melhor_AICc) {
       melhor_AICc <- fit$aicc
     }
-    cat("p =",p,", q =",q,", AICc =", fit$aicc, "\n")
+    cat("p =", p,", q =", q,", AICc =", fit$aicc, "\n")
   }
 }
 melhor_AICc # p=0 q=2 AICc = 881.2515
 
-
 # Ajuste do modelo escolhido
-(fit = Arima(serie_diff, order=c(0,1,2), seasonal=c(0,1,1)))
+(fit_arima <- Arima(serie_diff, order=c(0, 0, 2), seasonal = c(0, 0, 1)))
 
 # Residuos
-par(mfrow=c(1,1))
-residuos <- fit$residuals %>% window(start=c(1960,1))
-par(mfrow=c(1,3))
-plot(residuos,main="Res?duos ap?s \ninicializa??o do modelo")
-qqnorm(residuos);qqline(residuos)
-acf(residuos,lag.max=12*5)
+par(mfrow = c(1, 1))
+residuos <- fit_arima$residuals %>%
+  window(start = c(1960, 1))
+par(mfrow=c(1, 3))
+plot(residuos, main = "Resíduos após ininicialização do modelo")
+qqnorm(residuos)
+qqline(residuos)
+acf(residuos, lag.max = 12 * 5)
 shapiro <- shapiro.test(residuos)
 kpss <- kpss.test(residuos)
-box <- Box.test(residuos,lag=15,type='Ljung-Box')
+box <- Box.test(residuos,lag=15,type="Ljung-Box")
 
 # resumo dos testes
-df.residuos <- data.frame("Teste"=c("Shapiro-Wilk","KPSS","Ljung-Box"),
-                        "P-valor"=c(shapiro$p.value,kpss$p.value,box$p.value),
-                        check.names=FALSE)
+df.residuos <- data.frame(
+  Teste = c("Shapiro-Wilk", "KPSS", "Ljung-Box"),
+  "P-valor" = c(shapiro$p.value, kpss$p.value, box$p.value),
+  check.names = FALSE
+)
 
 
 
-### MODELO            ####
-### COM TRANSFORMACAO ####
-### DE BOX-COX        ###
+### 1.2 Modelo com transformação de BoxCox
 
 lambda <- BoxCox.lambda(serie)
 paste("Lambda =", lambda)
 
-serie_transf <- BoxCox(serie,lambda = lambda)
-par(mfrow=c(1,2))
-plot.ts(serie,main="S?rie Original")
-plot.ts(serie_transf,main="S?rie Transformada")
+serie_transf <- BoxCox(serie, lambda = lambda)
+par(mfrow = c(1, 2))
+plot.ts(serie, main = "Série Original")
+plot.ts(serie_transf, main = "Série Transformada")
 
 serie_transf %>% ndiffs()
 serie_transf %>% diff() %>% nsdiffs()
 
-serie_transf_diff <- serie_transf %>% 
-  diff() %>% diff(lag=12)
+serie_transf_diff <- serie_transf %>%
+  diff() %>%
+  diff(lag=12)
 
 kpss.test(serie_transf_diff)
 
@@ -148,7 +154,83 @@ par(mfrow=c(1,2))
 acf(serie_transf_diff,lag.max = 5*12)
 pacf(serie_transf_diff,lag.max = 5*12)
 
+## Testar combinacoes de p,q,P,Q ##
 
+melhor_AICc <- Inf
+melhores_qs <- melhores_ps <- melhores_Ps <- melhores_Qs <- AICcs <- c()
+
+for (q in 0:3) {
+  for (p in 0:3) {
+    for (P in 0:1) {
+      for (Q in 0:1) {
+        deu_errado <- FALSE
+        
+        tryCatch({
+          fit2 <- Arima(serie_transf_diff, order = c(p, 0, q), seasonal = c(P, 0, Q))
+          melhor_AICc <- fit2$aicc
+          melhores_ps <- c(melhores_ps, p)
+          melhores_qs <- c(melhores_qs, q)
+          melhores_Ps <- c(melhores_Ps, P)
+          melhores_Qs <- c(melhores_Qs, Q)
+          AICcs <- c(AICcs, melhor_AICc)
+        }, error = function(e) {
+          deu_errado <- TRUE
+        })
+        
+        if (deu_errado) {
+          next
+        }
+      }
+    }
+  }
+}
+
+aiccs<- data.frame(
+  "AICc"=AICcs,
+  "p"=melhores_ps,
+  "q"=melhores_qs,
+  "P"=melhores_Ps,
+  "Q"=melhores_Qs
+)
+
+aiccs %>%
+  arrange(desc(AICc)) %>%
+  slice(59:64) %>%
+  kableExtra::kbl(.,digits=4,align=c("l","c","c"),booktabs = T,caption = "AICc dos modelos") %>% 
+  kableExtra::kable_classic(full_width=FALSE,latex_options = "HOLD_position")
+
+
+
+# Ajuste do modelo escolhido
+(fit_arima_boxcox <- Arima(
+  serie_transf_diff, order=c(0, 0, 3), seasonal=c(0, 0, 1),
+  lambda = lambda)
+)
+fit_arima_boxcox$aicc
+
+# Obs.: em alguns cálculos (principalmente com P=0 e Q=0), apareceu o erro "non-stationary seasonal AR part from CSS". 
+# Isso acontece porque, ao usar CSS (soma condicional de quadrados), é possível que os coeficientes autoregressivos sejam não-estacionários. 
+# Para evitar esse problema, use a opção "method = c("ML")" dentro da função "Arima()" 
+# Se for o caso (que não é o desse exemplo), pode ser também inserido o parâmetro "lambda = lambda" para receber o resultado "lambda = BoxCox.lambda(y)".
+
+# Residuos
+par(mfrow=c(1, 1))
+residuos <- fit_arima_boxcox$residuals %>% window(start=c(1960,1))
+par(mfrow=c(1, 3))
+plot(residuos, main="Resíduos após ininicialização do modelo")
+qqnorm(residuos)
+qqline(residuos)
+acf(residuos,lag.max = 12 * 5)
+shapiro <- shapiro.test(residuos)
+kpss <- kpss.test(residuos)
+box <- Box.test(residuos, lag = 15, type="Ljung-Box")
+
+# resumo dos testes
+df.residuos <- data.frame(
+  Teste = c("Shapiro-Wilk", "KPSS", "Ljung-Box"),
+  "P-valor" = c(shapiro$p.value, kpss$p.value, box$p.value),
+  check.names=FALSE
+)
 #################
 # MODELOS ETS #
 #################
@@ -160,31 +242,30 @@ library(knitr)
 
 # ETS
 # Resultado de critério de informação ETS sem transformação
-fit1<- ets(serie,model = "AAA")
-fit2<- ets(serie,model = "AAA",damped = TRUE)
-fit3<- ets(serie,model = "MAA")
-fit4<- ets(serie,model = "MAA",damped = TRUE)
-fit5<- ets(serie,model = "MAM")
-fit6<- ets(serie,model = "MMM")
-fit7<- ets(serie,model = "MAM",damped = TRUE)
-fit8<- ets(serie,model = "MMM", damped = TRUE)
-AIC <- rbind(fit1$aic,fit2$aic,fit3$aic,fit4$aic,
-             fit5$aic,fit6$aic,fit7$aic,fit8$aic)
-AICc <- rbind(fit1$aicc,fit2$aicc,fit3$aicc,fit4$aicc,
-              fit5$aicc,fit6$aicc,fit7$aicc,fit8$aicc)
-BIC <- rbind(fit1$bic,fit2$bic,fit3$bic,fit4$bic,
-             fit5$bic,fit6$bic,fit7$bic,fit8$bic)
-Modelo <- cbind(c("ETS(A,A,A)","ETS(A,Ad,A)","ETS(M,A,A)","ETS(M,Ad,A)",
-                  "ETS(M,A,M)","ETS(M,M,M)","ETS(M,Ad,M)","ETS(M,Md,M)"))
-d <- data.frame(Modelo,AIC,AICc,BIC)
+ets_fit1 <- ets(serie,model = "AAA")
+ets_fit2 <- ets(serie,model = "AAA", damped = TRUE)
+ets_fit3 <- ets(serie,model = "MAA")
+ets_fit4 <- ets(serie,model = "MAA",damped = TRUE)
+ets_fit5 <- ets(serie,model = "MAM")
+ets_fit6 <- ets(serie,model = "MMM")
+ets_fit7 <- ets(serie,model = "MAM",damped = TRUE)
+ets_fit8 <- ets(serie,model = "MMM", damped = TRUE)
+
+d <- list(ets_fit1, ets_fit2, ets_fit3, ets_fit4, ets_fit5, ets_fit6, ets_fit7, ets_fit8) %>%
+  map(
+    ~with(., c(Method = method, AIC = aic, AICc = aicc, BIC = bic))
+  ) %>%
+  reduce(rbind) %>%
+  as.data.frame(row.names=FALSE)
+
 knitr::kable(d) # MODELO ETS(M,M,M) MENOR AIC, AICc e BIC
 
 
 # Decomposição ETS sem transformação
-plot(fit6)
+plot(ets_fit6)
 
 # Análise de resíduos ETS sem transformação
-E <- fit6$residuals
+E <- ets_fit6$residuals
 par(mfrow=c(2,2))
 plot(E)
 acf(E)
@@ -213,28 +294,26 @@ plot(serie_box,main="Série com\ntransformacao de Box-Cox")
 mstl(serie_box)%>%plot()
 
 # Resultado de critério de informação ETS com transformação
-fit1b<- ets(serie_box,model = "AAA")
-fit2b<- ets(serie_box,model = "AAA",damped = TRUE)
-fit3b<- ets(serie_box,model = "MAA")
-fit4b<- ets(serie_box,model = "MAA",damped = TRUE)
-fit5b<- ets(serie_box,model = "MAM")
-fit6b<- ets(serie_box,model = "MMM")
-fit7b<- ets(serie_box,model = "MAM",damped = TRUE)
-fit8b<- ets(serie_box,model = "MMM", damped = TRUE)
-AICb <- rbind(fit1b$aic,fit2b$aic,fit3b$aic,fit4b$aic,
-            fit5b$aic,fit6b$aic,fit7b$aic,fit8b$aic)
-AICcb <- rbind(fit1b$aicc,fit2b$aicc,fit3b$aicc,fit4b$aicc,
-              fit5b$aicc,fit6b$aicc,fit7b$aicc,fit8b$aicc)
-BICb <- rbind(fit1b$bic,fit2$bic,fit3$bic,fit4b$bic,
-             fit5b$bic,fit6b$bic,fit7b$bic,fit8b$bic)
-Modelo <- cbind(c("ETS(A,A,A)","ETS(A,Ad,A)","ETS(M,A,A)",
-                  "ETS(M,Ad,A)","ETS(M,A,M)","ETS(M,M,M)",
-                  "ETS(M,Ad,M)","ETS(M,Md,M)"))
-d <- data.frame(Modelo,AICb,AICcb,BICb)
-knitr::kable(d)
+ets_fit1b<- ets(serie_box,model = "AAA")
+ets_fit2b<- ets(serie_box,model = "AAA",damped = TRUE)
+ets_fit3b<- ets(serie_box,model = "MAA")
+ets_fit4b<- ets(serie_box,model = "MAA",damped = TRUE)
+ets_fit5b<- ets(serie_box,model = "MAM")
+ets_fit6b<- ets(serie_box,model = "MMM")
+ets_fit7b<- ets(serie_box,model = "MAM",damped = TRUE)
+ets_fit8b<- ets(serie_box,model = "MMM", damped = TRUE)
+
+
+d_boxcox <- list(ets_fit1b, ets_fit2b, ets_fit3b, ets_fit4b, ets_fit5b, ets_fit6b, ets_fit7b, ets_fit8b) %>%
+  map(
+    ~with(., c(Method = method, AIC = aic, AICc = aicc, BIC = bic))
+  ) %>%
+  reduce(rbind) %>%
+  as.data.frame(row.names=FALSE)
+knitr::kable(d_boxcox)
 
 # modelo escolhido FIT1B - menos AIC, AICc e BIC
-fit1b
+ets_fit1b
 
 # ETS(A,A,A) - parâmetros
 #alpha = 0.55 
@@ -242,10 +321,10 @@ fit1b
 #gamma = 1e-04 
 
 # Decomposição ETS com transformação
-plot(fit1b)
+plot(ets_fit1b)
 
 # Análise de resíduos ETS com transformação
-Eb <- fit1$residuals
+Eb <- ets_fit1$residuals
 par(mfrow=c(2,2))
 plot(Eb)
 acf(Eb)
@@ -268,32 +347,48 @@ knitr::kable(db)
 
 #Funções de previsão
 
-# Sarima
-f_arima <- function(y, h){
-  fit = Arima(y, order=c(0,1,2), seasonal=c(0,1,1))
-  forecast(fit, h)
+f_arima <- function(y, h, ...){
+  fit = Arima(serie_diff, order=c(0, 0, 2), seasonal = c(0, 0, 1))
+  forecast(fit, h, ...)
 }
 
 # #Sarima com transformação 
-# ATENÇÃO: SUBSTITUIR VALORES p,d,q, P,D, Q
-# f_arima_boxcox <- function(y, h){
-#   fit = Arima(y, order=c(p,d,q), seasonal=c(P,D,Q), lambda = -0.12969)
-#   forecast(fit, h)
-# }
 
-
+f_arima_boxcox <- function(y, h, ...){
+  fit = Arima(serie_transf_diff, order=c(0, 0, 3), seasonal=c(0, 0, 1), lambda = lambda)
+  forecast(fit, h, ...)
+}
 
 #ETS
-f_ets <- function(y, h){
+f_ets <- function(y, h, ...){
   fit = ets(y, model="MMM")
-  forecast(fit, h)
+  forecast(fit, h, ...)
 }
 
 #ETS com transformação
-f_ets_boxcox <- function(y, h){
-  fit = ets(y, model="AAA", lambda =-0.12969)
-  forecast(fit, h)
+f_ets_boxcox <- function(y, h, ...){
+  fit = ets(y, model="AAA", lambda = lambda)
+  forecast(fit, h, ...)
 }
+
+
+# gráficos de previsão
+par(mfrow=c(2, 2))
+plot(
+  f_arima(y=serie_diff, h=5, level = 95)
+)
+
+plot(
+  f_arima_boxcox(y=serie_diff, h=5, level = 95)
+)
+
+plot(
+  f_ets(y=serie, h=5, level = 95)
+)
+
+plot(
+  f_ets_boxcox(y=serie, h=5, level = 95)
+)
 
 
 # Tamanho da série
@@ -302,18 +397,72 @@ n = length(serie)
 # Erros de previsão
 
 # Sarima
-CV_arima = tsCV(y=serie, forecastfunction=f_arima, h=5, initial=n-14)
+CV_arima = tsCV(
+  y = serie_diff, forecastfunction = f_arima,
+  h = 5, initial = n - 14
+)
 
 #Sarima com transformação
-CV_arima_boxcox = tsCV(y=serie, forecastfunction=f_arima_boxcox,
-                       h=5, initial=n-14)
+CV_arima_boxcox = tsCV(
+  y = serie_diff, forecastfunction = f_arima_boxcox,
+  h = 5, initial = n - 14
+)
 
 #ETS
-CV_ets = tsCV(y=serie, forecastfunction=f_ets, h=5, initial=n-14)
+CV_ets = tsCV(
+  y = serie, forecastfunction = f_ets,
+  h = 5, initial = n - 14
+)
 
 #ETS com transformação
-CV_ets_boxcox = tsCV(y=serie, forecastfunction=f_ets_boxcox,
-                     h=5, initial=n-14)
+CV_ets_boxcox = tsCV(
+  y = serie, forecastfunction = f_ets_boxcox,
+  h = 5, initial = n - 14
+)
+
+
+# MAE preditivo
+
+MAE_arima <- CV_arima %>% abs() %>% colMeans(na.rm=T)
+MAE_arima_boxcox <- CV_arima_boxcox %>% abs() %>% colMeans(na.rm=T)
+MAE_ets <- CV_ets %>% abs() %>% colMeans(na.rm=T)
+MAE_ets_boxcox <- CV_ets_boxcox %>% abs() %>% colMeans(na.rm=T)
+
+MAEs_tab <- cbind(MAE_arima, MAE_arima_boxcox, MAE_ets, MAE_ets_boxcox) %>%
+  as_tibble() %>%
+  mutate(h=1:5) %>%
+  pivot_longer(cols=c("MAE_arima", "MAE_arima_boxcox", "MAE_ets", "MAE_ets_boxcox")) %>%
+  mutate(
+    name = c(
+      "MAE_arima" = "ARIMA",
+      "MAE_arima_boxcox" = "ARIMA Box-Cox",
+      "MAE_ets" = "ETS",
+      "MAE_ets_boxcox" = "ETS Box-Cox"
+    )[name]
+  )
+
+
+ggplot(MAEs_tab) +
+  aes(x = h, y = value, color = name) +
+  geom_line() +
+  theme_bw() +
+  theme(
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    legend.position = c(0.87, 0.26),
+    legend.title = element_blank(),
+    legend.spacing.y = unit(0, "mm"), 
+    panel.border = element_rect(colour = "black", fill=NA),
+    axis.text = element_text(colour = 1, size = 12),
+    legend.background = element_blank(),
+    legend.box.background = element_rect(colour = "black")
+  ) +
+  labs(x = "Janela", y = "Erro Médio Absoluto") +
+  scale_color_viridis_d()
+
+ggsave("mae_modelos.pdf")
+
+
 
 
 #################
@@ -323,19 +472,19 @@ CV_ets_boxcox = tsCV(y=serie, forecastfunction=f_ets_boxcox,
 # já deixei indicado a sugestão de código para a arima com transformação
 
 #arima
-xx.forec_arima <- f_arima(serie,horizonte)
+xx.forec_arima <- f_arima(serie, horizonte)
 #ets
-xx.forec_ets <-f_ets(serie,horizonte)
+xx.forec_ets <-f_ets(serie, horizonte)
 #arima_boxcox
-# xx.forec_arima_boxcox <-f_arima_boxcox(serie,horizonte)
+xx.forec_arima_boxcox <-f_arima_boxcox(serie, horizonte)
 #ets_boxcox
-xx.forec_ets_boxcox <-f_ets_boxcox(serie,horizonte)
+xx.forec_ets_boxcox <-f_ets_boxcox(serie, horizonte)
 #auto.arima
-xx.forec_auto <- auto.arima(serie, allowdrift=FALSE) %>% forecast(horizonte)
+xx.forec_auto <- auto.arima(serie, allowdrift = FALSE) %>% forecast(horizonte)
 #ses
-xx.forec_ses <- ses(serie, allowdrift=FALSE) %>% forecast(horizonte)
+xx.forec_ses <- ses(serie, allowdrift = FALSE) %>% forecast(horizonte)
 #holt
-xx.forec_holt <- holt(serie, allowdrift=FALSE) %>% forecast(horizonte)
+xx.forec_holt <- holt(serie, allowdrift = FALSE) %>% forecast(horizonte)
 #ets
 xx.forec_ets <- ets(serie) %>% forecast(horizonte)
 #stlf
@@ -349,7 +498,7 @@ xx.forec_tbats <- tbats(serie, allowdrift=FALSE) %>% forecast(horizonte)
 
 MAE_arima2 <- mean(abs(dados_teste - xx.forec_arima$mean))
 MAE_ets2 <- mean(abs(dados_teste - xx.forec_ets$mean))
-# MAE_arima_boxcox2 <- mean(abs(dados_teste - xx.forec_arima_boxcox$mean))
+MAE_arima_boxcox2 <- mean(abs(dados_teste - xx.forec_arima_boxcox$mean))
 MAE_ets_boxcox2 <- mean(abs(dados_teste - xx.forec_ets_boxcox$mean))
 MAE_auto <- mean(abs(dados_teste - xx.forec_auto$mean))
 MAE_ses <- mean(abs(dados_teste - xx.forec_ses$mean))
@@ -358,12 +507,12 @@ MAE_ets <- mean(abs(dados_teste - xx.forec_ets$mean))
 MAE_stlf <- mean(abs(dados_teste - xx.forec_stlf$mean))
 MAE_bats <- mean(abs(dados_teste - xx.forec_bats$mean))
 MAE_tbats <- mean(abs(dados_teste - xx.forec_tbats$mean))
-data_mae <- rbind(MAE_arima2,MAE_ets2, MAE_ets_boxcox2,
+data_mae <- rbind(MAE_arima2,MAE_ets2, MAE_arima_boxcox2, MAE_ets_boxcox2,
                   MAE_auto,MAE_ets,MAE_holt,MAE_ets,MAE_stlf,MAE_bats,MAE_tbats)
 data_mae <- as.data.frame(data_mae)
 colnames(data_mae) <- "MAE"
-rownames(data_mae) <- c('Arima', 'ETS', 'ETS Box Cox',
-                        'Auto arima', 'Ses', 'Holt', 'Ets',
-                        'Stlf', 'Bats', 'Tbats')
-### FALTA ARIMA BOX-COX
+rownames(data_mae) <- c("Arima", "ETS", "Arima Box Cox","ETS Box Cox",
+                        "Auto arima", "Ses", "Holt", "Ets",
+                        "Stlf", "Bats", "Tbats")
+
 knitr::kable(data_mae)
