@@ -348,14 +348,14 @@ knitr::kable(db)
 #Funções de previsão
 
 f_arima <- function(y, h, ...){
-  fit = Arima(serie_diff, order=c(0, 0, 2), seasonal = c(0, 0, 1))
+  fit = Arima(y, order=c(0, 0, 2), seasonal = c(0, 0, 1))
   forecast(fit, h, ...)
 }
 
 # #Sarima com transformação 
 
 f_arima_boxcox <- function(y, h, ...){
-  fit = Arima(serie_transf_diff, order=c(0, 0, 3), seasonal=c(0, 0, 1), lambda = lambda)
+  fit = Arima(y, order=c(0, 0, 3), seasonal=c(0, 0, 1), lambda = lambda)
   forecast(fit, h, ...)
 }
 
