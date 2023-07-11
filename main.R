@@ -8,7 +8,7 @@
 
 # Pacotes #
 library(pacman)
-p_load(tidyverse,tseries,forecast,Mcomp,kableExtra, purrr)
+p_load(knitr,tidyverse,tseries,forecast,Mcomp,kableExtra, purrr)
 
 # Serie escolhida #
 data(M3)
@@ -68,27 +68,10 @@ ggtsdisplay(serie_diff)
 # lags simples
 # ACF 
 acf(serie_diff, lag.max = 12 * 5)
-# as correlacoes nao parecem decair para zero de forma amortizada
-# mas tbm nao parece haver quebra no lag simples  
 # PACF
 pacf(serie_diff, lag.max = 12*5)
-# o padrao com relacao ao lag simples nao eh mto claro 
-# o decaimento nao eh amortizado
-# nao ha quebra abrupta para o zero
-# uma vez que nao eh amortizado, testar para p = 0 e 1, P = 0 e 1; 
 
 # conclusao: testar valores de p e q para o ARIMA
-
-# lags sazonais
-# ACF 
-# parece haver correlacao significativa no lag sazonal 1...
-# seguida de quebra 
-# PACF
-# nao eh poss?vel observar decaimento amortizado
-# P=0 e Q=1 (nao identificada quebra no lag P) eh um bom candidato
-# Tbm nao identificamos quebras nos lags sazonais, pois todos estao abaixo dos limites
-# Mas nao faz sentido usar P=0 e Q=0 pq no ACF tem quebra no lag sazonal 1
-# P=1 e Q=1? nao verificado decaimento amortizado em ACF e PACF
 
 # Testando combinacoes de p,q
 
@@ -129,7 +112,6 @@ df.residuos <- data.frame(
   "P-valor" = c(shapiro$p.value, kpss$p.value, box$p.value),
   check.names = FALSE
 )
-
 
 ### 1.2 Modelo com transformação de BoxCox
 
@@ -213,7 +195,7 @@ fit_arima_boxcox$aicc
 par(mfrow=c(1, 1))
 residuos <- fit_arima_boxcox$residuals %>% window(start=c(1960,1))
 par(mfrow=c(1, 3))
-plot(residuos, main="Resíduos após ininicialização do modelo") #grafico ta zuado
+plot(residuos, main="Resíduos após ininicialização do modelo")
 qqnorm(residuos)
 qqline(residuos)
 acf(residuos,lag.max = 12 * 5)
@@ -230,11 +212,6 @@ df.residuos <- data.frame(
 #################
 # MODELOS ETS #
 #################
-
-library(tseries)
-library(tidyverse)
-library(forecast)
-library(knitr)
 
 # ETS
 # Resultado de critério de informação ETS sem transformação
@@ -279,7 +256,6 @@ d <- data.frame(Estatistica,p_valor)
 knitr::kable(d)
 
 # ETS com transformação
-
 
 lambda <- serie %>% BoxCox.lambda()
 serie_box <- serie %>% BoxCox(lambda)
@@ -367,7 +343,6 @@ f_ets_boxcox <- function(y, h, ...){
   forecast(fit, h, ...)
 }
 
-
 # gráficos de previsão
 par(mfrow=c(2, 2))
 plot(
@@ -386,13 +361,14 @@ plot(
   f_ets_boxcox(y=serie, h=5, level = 95)
 )
 
-
 # Tamanho da série
+
 n = length(serie)
 
 # Erros de previsão
 
 # Sarima
+
 CV_arima = tsCV(
   y = serie_diff, forecastfunction = f_arima,
   h = 5, initial = n - 14
