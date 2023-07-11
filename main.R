@@ -32,7 +32,7 @@ serie %>%
   )
 
 # Decomposicao #
-  # STl
+# STl
 stl(serie, s.window = 12) %>%
   plot(main = "janela = 12")
 #s.window: tamanho da janela de ajuste para sazonalidade
@@ -103,10 +103,12 @@ for(p in 0:3) {
     cat("p =", p,", q =", q,", AICc =", fit$aicc, "\n")
   }
 }
-melhor_AICc # p=0 q=2 AICc = 881.2515
+melhor_AICc # p=0 q=1 AICc = 1001.2
 
 # Ajuste do modelo escolhido
-(fit_arima <- Arima(serie_diff, order=c(0, 0, 2), seasonal = c(0, 0, 1)))
+(fit_arima <- Arima(serie_diff, order=c(0, 0, 1), seasonal = c(0, 0, 1)))
+
+fit_arima$aicc 
 
 # Residuos
 par(mfrow = c(1, 1))
@@ -127,7 +129,6 @@ df.residuos <- data.frame(
   "P-valor" = c(shapiro$p.value, kpss$p.value, box$p.value),
   check.names = FALSE
 )
-
 
 
 ### 1.2 Modelo com transformação de BoxCox
@@ -199,25 +200,20 @@ aiccs %>%
   kableExtra::kbl(.,digits=4,align=c("l","c","c"),booktabs = T,caption = "AICc dos modelos") %>% 
   kableExtra::kable_classic(full_width=FALSE,latex_options = "HOLD_position")
 
-
+# menor AICc = -539.9822 (0,0,1) x (0,0,1)
 
 # Ajuste do modelo escolhido
 (fit_arima_boxcox <- Arima(
-  serie_transf_diff, order=c(0, 0, 3), seasonal=c(0, 0, 1),
-  lambda = lambda)
+  serie_transf_diff, order=c(0, 0, 1), seasonal=c(0, 0, 1))
 )
-fit_arima_boxcox$aicc
 
-# Obs.: em alguns cálculos (principalmente com P=0 e Q=0), apareceu o erro "non-stationary seasonal AR part from CSS". 
-# Isso acontece porque, ao usar CSS (soma condicional de quadrados), é possível que os coeficientes autoregressivos sejam não-estacionários. 
-# Para evitar esse problema, use a opção "method = c("ML")" dentro da função "Arima()" 
-# Se for o caso (que não é o desse exemplo), pode ser também inserido o parâmetro "lambda = lambda" para receber o resultado "lambda = BoxCox.lambda(y)".
+fit_arima_boxcox$aicc 
 
 # Residuos
 par(mfrow=c(1, 1))
 residuos <- fit_arima_boxcox$residuals %>% window(start=c(1960,1))
 par(mfrow=c(1, 3))
-plot(residuos, main="Resíduos após ininicialização do modelo")
+plot(residuos, main="Resíduos após ininicialização do modelo") #grafico ta zuado
 qqnorm(residuos)
 qqline(residuos)
 acf(residuos,lag.max = 12 * 5)
