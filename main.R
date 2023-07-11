@@ -318,16 +318,14 @@ knitr::kable(db)
 #################
 
 #Funções de previsão
-
 f_arima <- function(y, h, ...){
-  fit = Arima(y, order=c(0, 0, 2), seasonal = c(0, 0, 1))
+  fit = Arima(y, order=c(0, 1, 1), seasonal = c(0, 1, 1))
   forecast(fit, h, ...)
 }
 
 # #Sarima com transformação 
-
 f_arima_boxcox <- function(y, h, ...){
-  fit = Arima(y, order=c(0, 0, 3), seasonal=c(0, 0, 1), lambda = lambda)
+  fit = Arima(y, order=c(0, 1, 1), seasonal=c(0, 1, 1), lambda = lambda)
   forecast(fit, h, ...)
 }
 
@@ -370,13 +368,13 @@ n = length(serie)
 # Sarima
 
 CV_arima = tsCV(
-  y = serie_diff, forecastfunction = f_arima,
+  y = serie, forecastfunction = f_arima,
   h = 5, initial = n - 14
 )
 
 #Sarima com transformação
 CV_arima_boxcox = tsCV(
-  y = serie_diff, forecastfunction = f_arima_boxcox,
+  y = serie, forecastfunction = f_arima_boxcox,
   h = 5, initial = n - 14
 )
 
@@ -404,8 +402,8 @@ MAEs_tab <- data.frame(
   pivot_longer(cols=c("MAE_arima", "MAE_arima_boxcox", "MAE_ets", "MAE_ets_boxcox")) %>%
   mutate(
     name = c(
-      "MAE_arima" = "ARIMA",
-      "MAE_arima_boxcox" = "ARIMA Box-Cox",
+      "MAE_arima" = "SARIMA",
+      "MAE_arima_boxcox" = "SARIMA Box-Cox",
       "MAE_ets" = "ETS",
       "MAE_ets_boxcox" = "ETS Box-Cox"
     )[name]
