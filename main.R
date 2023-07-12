@@ -26,7 +26,6 @@ M3[[id]]$type #tipo
 
 serie %>%
   plot(
-    main = "Série temporal do ?ndice geral da produ??o industrial,\n1958-1965 ",
     xlab = "Ano",
     ylab = "Índice"
   )
@@ -64,7 +63,7 @@ kpss.test(serie_diff)
 # teste aponta estacionariedade
 
 # ACF e PACF #
-ggtsdisplay(serie_diff)
+ggtsdisplay(serie_diff, theme=theme_bw())
 # lags simples
 # ACF 
 acf(serie_diff, lag.max = 12 * 5)
@@ -94,15 +93,15 @@ melhor_AICc # p=0 q=1 AICc = 1001.2
 fit_arima$aicc 
 
 # Residuos
-par(mfrow = c(1, 1))
+par(mfrow = c(2, 2))
 residuos <- fit_arima$residuals %>%
   window(start = c(1960, 1))
-par(mfrow=c(1, 3))
-plot(residuos, main = "Resíduos após ininicialização do modelo")
+par(mfrow=c(2, 2))
+plot(residuos, main = "Resíduos após inicialização do modelo")
 qqnorm(residuos)
 qqline(residuos)
 acf(residuos, lag.max = 12 * 5)
-shapiro <- shapiro.test(residuos)
+ shapiro <- shapiro.test(residuos)
 kpss <- kpss.test(residuos)
 box <- Box.test(residuos,lag=15,type="Ljung-Box")
 
@@ -194,8 +193,8 @@ fit_arima_boxcox$aicc
 # Residuos
 par(mfrow=c(1, 1))
 residuos <- fit_arima_boxcox$residuals %>% window(start=c(1960,1))
-par(mfrow=c(1, 3))
-plot(residuos, main="Resíduos após ininicialização do modelo")
+par(mfrow=c(2, 2))
+plot(residuos, main="Resíduos após inicialização do modelo")
 qqnorm(residuos)
 qqline(residuos)
 acf(residuos,lag.max = 12 * 5)
@@ -235,7 +234,7 @@ knitr::kable(d) # MODELO ETS(M,M,M) MENOR AIC, AICc e BIC
 
 
 # Decomposição ETS sem transformação
-plot(ets_fit6)
+plot(ets_fit6, main=NULL)
 
 # Análise de resíduos ETS sem transformação
 E <- ets_fit6$residuals
@@ -262,7 +261,7 @@ serie_box <- serie %>% BoxCox(lambda)
 
 # Visualização e decomposição da ETS com transformação
 dev.off
-plot(serie_box,main="Série com\ntransformacao de Box-Cox")
+plot(serie_box)
 mstl(serie_box)%>%plot()
 
 # Resultado de critério de informação ETS com transformação
@@ -344,11 +343,11 @@ f_ets_boxcox <- function(y, h, ...){
 # gráficos de previsão
 par(mfrow=c(2, 2))
 plot(
-  f_arima(y=serie_diff, h=5, level = 95)
+  f_arima(y=serie, h=5, level = 95)
 )
 
 plot(
-  f_arima_boxcox(y=serie_diff, h=5, level = 95)
+  f_arima_boxcox(y=serie, h=5, level = 95)
 )
 
 plot(
