@@ -408,6 +408,9 @@ MAEs_tab <- data.frame(
     )[name]
   )
 
+# tabela de erros por horizonte de previsão para cada modelo selecionado
+MAEs_pivot <- MAEs_tab %>%
+  pivot_wider(names_from = name, values_from = value)  
 
 ggplot(MAEs_tab) +
   aes(x = h, y = value, color = name) +
